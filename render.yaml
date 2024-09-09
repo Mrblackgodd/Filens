@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: telegram-bot
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        value: <YOUR_BOT_TOKEN>
+      - key: TELEGRAM_CHANNEL_ID
+        value: <YOUR_CHANNEL_ID>
+      - key: WEBHOOK_URL
+        value: <YOUR_WEBHOOK_URL>
+    plan: free
+    autoDeploy: true
