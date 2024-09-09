@@ -1,5 +1,3 @@
-import os
-import logging
 from flask import Flask, request
 from telegram import Bot, Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
@@ -18,8 +16,8 @@ application = None
 
 # Handler for processing files
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    file = update.message.document or update.message.video or update.message.photo
-    if file:
+    if update.message.document or update.message.video or update.message.photo:
+        file = update.message.document or update.message.video or update.message.photo
         file_id = file.file_id
         file_path = (await bot.get_file(file_id)).file_path
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
@@ -43,7 +41,10 @@ async def set_webhook():
 async def main():
     global application
     application = Application.builder().token(TOKEN).build()
-    application.add_handler(MessageHandler(filters.Document.ALL | filters.Video.ALL | filters.Photo.ALL, handle_file))
+    
+    # Use filters.Document.ALL, filters.Video.ALL, and filters.Photo.ALL
+    application.add_handler(MessageHandler(filters.ALL & (filters.Document | filters.Video | filters.Photo), handle_file))
+    
     await set_webhook()
     await application.start()
     await application.idle()
