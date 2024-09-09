@@ -5,9 +5,9 @@ services:
     dockerfilePath: ./Dockerfile
     envVars:
       - key: TELEGRAM_BOT_TOKEN
-        value: <YOUR_BOT_TOKEN>
+        value: 6437645148:AAFDCW7nnMOO3Ha1jif_WdBSSsOAt4U-N5A
       - key: TELEGRAM_CHANNEL_ID
-        value: <YOUR_CHANNEL_ID>
+        value: -1001748572062
       - key: WEBHOOK_URL
         value: <YOUR_WEBHOOK_URL>
     plan: free
