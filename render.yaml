@@ -9,6 +9,6 @@ services:
       - key: TELEGRAM_CHANNEL_ID
         value: -1001748572062
       - key: WEBHOOK_URL
-        value: <YOUR_WEBHOOK_URL>
+        value: https://filens.onrender.com/
     plan: free
     autoDeploy: true
