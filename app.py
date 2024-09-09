@@ -78,4 +78,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
-    app.run(port=8443, debug=True)
+    app.run(host="0.0.0.0", port=8443)
