@@ -1,22 +1,20 @@
 # Use the official Python image from the Docker Hub
 FROM python:3.10-slim
 
-# Set the working directory inside the Docker container
+# Set the working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy the requirements file into the container
+COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt
+# Install the dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose the port Flask will run on
-EXPOSE 8443
+# Copy the rest of the application code into the container
+COPY . .
 
-# Define environment variables
-ENV TELEGRAM_BOT_TOKEN=<YOUR_BOT_TOKEN>
-ENV TELEGRAM_CHANNEL_ID=<YOUR_CHANNEL_ID>
-ENV WEBHOOK_URL=<YOUR_WEBHOOK_URL>
+# Expose the port on which the app will run
+EXPOSE 10000
 
-# Run the Flask app
+# Define the command to run the application
 CMD ["python", "app.py"]
