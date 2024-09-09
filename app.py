@@ -67,7 +67,7 @@ async def set_webhook():
 async def main():
     # Add command and message handlers
     bot_app.add_handler(CommandHandler("start", start))
-    bot_app.add_handler(MessageHandler(filters.Document.ALL | filters.Video.ALL | filters.Photo.ALL, handle_file))
+    bot_app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO | filters.VIDEO, handle_file))
 
     # Automatically set the webhook
     await set_webhook()
