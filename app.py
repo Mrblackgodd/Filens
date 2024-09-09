@@ -13,13 +13,13 @@ app = Flask(__name__)
 
 # Bot Token and Channel ID configuration
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")  # Private channel where files will be stored
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # The public URL for the bot webhook
+CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 
 # Initialize the bot application
 bot_app = Application.builder().token(TOKEN).build()
 
-# Function to generate a download link from file_id
+# Generate a download link from file_id
 async def generate_download_link(context, file_id):
     file = await context.bot.get_file(file_id)
     return file.file_path  # Direct download URL
@@ -60,8 +60,9 @@ def webhook():
 
 # Automatically set the webhook when the app starts
 async def set_webhook():
-    await bot_app.bot.set_webhook(url=WEBHOOK_URL + f"/{TOKEN}")
-    logger.info(f"Webhook set to {WEBHOOK_URL}/{TOKEN}")
+    webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
+    await bot_app.bot.set_webhook(url=webhook_url)
+    logger.info(f"Webhook set to {webhook_url}")
 
 # Main function to add handlers and start the bot
 async def main():
@@ -73,6 +74,7 @@ async def main():
     await set_webhook()
     
     # Start the bot
+    await bot_app.initialize()  # Initialize the application
     await bot_app.start()
 
 if __name__ == "__main__":
