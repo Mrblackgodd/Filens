@@ -41,9 +41,9 @@ async def set_webhook():
 async def main():
     global application
     application = Application.builder().token(TOKEN).build()
-    
-    # Use filters.Document.ALL, filters.Video.ALL, and filters.Photo.ALL
-    application.add_handler(MessageHandler(filters.ALL & (filters.Document | filters.Video | filters.Photo), handle_file))
+
+    # Add handlers for different types of messages
+    application.add_handler(MessageHandler(filters.Document.ALL | filters.Video.ALL | filters.Photo.ALL, handle_file))
     
     await set_webhook()
     await application.start()
