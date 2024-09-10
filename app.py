@@ -2,6 +2,10 @@ import os
 import logging
 import asyncio
 from flask import Flask, request
+from urllib.parse import quote
+
+# Use quote instead of url_quote
+
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters
 
