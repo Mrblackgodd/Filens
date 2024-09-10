@@ -1,75 +1,49 @@
-import os
-import logging
 import asyncio
 from flask import Flask, request
-from urllib.parse import quote
+from telegram import Update, Bot
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
+from telegram.constants import ParseMode
 
-# Use quote instead of url_quote
-
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters
-
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-
-# Initialize the Flask app
 app = Flask(__name__)
 
-# Create the Telegram application
-application = Application.builder().token(TOKEN).build()
+TOKEN = 'YOUR_BOT_TOKEN'  # Replace with your bot token
+WEBHOOK_URL = 'https://your-webhook-url'  # Replace with your Render service URL
 
-# Enable logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+async def handle_file(update: Update, context: CallbackContext) -> None:
+    chat_id = update.effective_chat.id
+    file = update.message.document or update.message.video or update.message.photo
+    if file:
+        file_id = file.file_id
+        file_info = await context.bot.get_file(file_id)
+        file_url = file_info.file_path
+        # Send the file URL back to the user
+        await context.bot.send_message(chat_id, f"Here is your download link: {file_url}")
 
-# Function to handle files
-async def handle_file(update: Update, context):
-    try:
-        message = update.message
-        if message.document:
-            file_id = message.document.file_id
-        elif message.photo:
-            file_id = message.photo[-1].file_id
-        elif message.video:
-            file_id = message.video.file_id
-        else:
-            await message.reply_text("Unsupported file format.")
-            return
+async def set_webhook() -> None:
+    bot = Bot(token=TOKEN)
+    await bot.set_webhook(url=WEBHOOK_URL)
 
-        # Store the file in a private channel
-        file = await context.bot.get_file(file_id)
-        file_path = file.file_path
+async def main() -> None:
+    # Initialize the application
+    application = Application.builder().token(TOKEN).build()
 
-        # Reply with the download link
-        download_link = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
-        await message.reply_text(f"Download Link: {download_link}")
-    
-    except Exception as e:
-        logger.error(f"Error handling file: {e}")
-        await message.reply_text("Something went wrong!")
-
-# Webhook route for Telegram updates
-@app.route(f"/{TOKEN}", methods=["POST"])
-def telegram_webhook():
-    update = Update.de_json(request.get_json(), application.bot)
-    asyncio.run(application.process_update(update))
-    return "OK"
-
-# Set webhook
-async def set_webhook():
-    webhook_url = WEBHOOK_URL + f"/{TOKEN}"
-    await application.bot.set_webhook(url=webhook_url)
-    logger.info(f"Webhook set to {webhook_url}")
-
-# Main function
-async def main():
-    # Add file handler
-    application.add_handler(MessageHandler(filters.ALL & (filters.Document | filters.Photo | filters.Video), handle_file))
+    # Add handlers
+    application.add_handler(MessageHandler(filters.Document.ALL | filters.Photo.ALL | filters.Video.ALL, handle_file))
 
     # Set webhook
     await set_webhook()
 
-    logger.info("Bot started")
+    # Start the application
+    await application.run_polling()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook() -> str:
+    json_str = request.get_data(as_text=True)
+    update = Update.de_json(json_str, Bot(token=TOKEN))
+    application = Application.builder().token(TOKEN).build()
+    application.process_update(update)
+    return 'ok'
+
+if __name__ == '__main__':
+    # Run the Flask server
+    app.run(port=8443, debug=True, host='0.0.0.0')
