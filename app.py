@@ -2,13 +2,10 @@ import os
 import logging
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
-from flask import Flask, request
-from threading import Thread
 
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
-# Initialize the Flask app
-app = Flask(__name__)
+# Initialize the bot
 bot = Bot(token=TOKEN)
 
 logging.basicConfig(
@@ -25,14 +22,23 @@ def handle_files(update: Update, context: CallbackContext) -> None:
     file = update.message.document or update.message.audio or update.message.video or update.message.photo[-1] if update.message.photo else None
 
     if file:
+        # Retrieve the file ID from the message
         file_id = file.file_id
-        
-        # Fetch the file path using the file ID
-        new_file = context.bot.get_file(file_id)
-        telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
 
-        # Respond with the Telegram file URL
-        update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
+        try:
+            # Fetch the file object from Telegram API
+            new_file = context.bot.get_file(file_id)
+
+            # Generate the Telegram direct file download URL
+            telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
+
+            # Send the direct download URL to the user
+            update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
+        
+        except Exception as e:
+            # Log the error and inform the user if there's an issue
+            logger.error(f"Error retrieving file: {e}")
+            update.message.reply_text("Sorry, I couldn't retrieve the file. Please try again.")
     else:
         update.message.reply_text("Please send a valid file!")
 
@@ -47,7 +53,7 @@ def run_bot():
     # Commands
     dp.add_handler(CommandHandler("start", start))
 
-    # Handle all file types
+    # Handle all file types (documents, audio, video, photos)
     dp.add_handler(MessageHandler(Filters.document | Filters.audio | Filters.video | Filters.photo, handle_files))
 
     # Log all errors
@@ -57,18 +63,5 @@ def run_bot():
     updater.start_polling()
     updater.idle()
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    """Handle updates from Telegram webhook."""
-    update = Update.de_json(request.get_json(), bot)
-    updater.dispatcher.process_update(update)
-    return 'ok', 200
-
-def run_flask():
-    """Run the Flask app to serve webhook."""
-    app.run(host='0.0.0.0', port=5000)
-
 if __name__ == "__main__":
-    # Run both bot and Flask app in parallel
-    Thread(target=run_bot).start()
-    Thread(target=run_flask).start()
+    run_bot()
