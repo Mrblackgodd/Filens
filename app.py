@@ -3,8 +3,8 @@ import logging
 from telegram import Update, Bot
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Load your bot token from environment variables
-TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+# Load your bot token directly
+TOKEN = '7388471602:AAE7jQNyFJ9vfMulivEZGYPfURjHMNBxilk'
 
 # Initialize the bot and logging
 bot = Bot(token=TOKEN)
@@ -19,27 +19,42 @@ def start(update: Update, context: CallbackContext) -> None:
 
 def handle_files(update: Update, context: CallbackContext) -> None:
     """Handle files sent or forwarded by users."""
-    file = update.message.document or update.message.audio or update.message.video or (update.message.photo[-1] if update.message.photo else None)
+    try:
+        # Check if the message is forwarded
+        message = update.message
+        if message.forward_date:
+            logger.info("Received a forwarded message.")
+            # Forwarded messages might contain files in different ways, extract it
+            file = message.document or message.audio or message.video or (message.photo[-1] if message.photo else None)
+        else:
+            logger.info("Received a normal message.")
+            # Non-forwarded messages
+            file = message.document or message.audio or message.video or (message.photo[-1] if message.photo else None)
 
-    if file:
-        file_id = file.file_id
-        logger.info(f"Received file with ID: {file_id}")
+        if file:
+            file_id = file.file_id
+            logger.info(f"Received file with ID: {file_id}")
 
-        try:
-            # Get file details from Telegram servers
+            # Fetch the file metadata from Telegram
             new_file = context.bot.get_file(file_id)
-            logger.info(f"File path retrieved: {new_file.file_path}")
+            file_path = new_file.file_path
 
-            # Construct the Telegram file download URL correctly
-            telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
-            update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
+            if file_path:
+                logger.info(f"File path retrieved: {file_path}")
+                # Construct the file download URL
+                telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_path}"
+                update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
+            else:
+                logger.error("File path not found in the API response.")
+                update.message.reply_text("Sorry, I couldn't retrieve the file path. Please try again.")
+        
+        else:
+            logger.warning("No valid file was found in the update message.")
+            update.message.reply_text("Please send a valid file!")
 
-        except Exception as e:
-            # Log and send error message if file retrieval fails
-            logger.error(f"Error retrieving file: {e}")
-            update.message.reply_text("Sorry, there was an error retrieving the file. Please try again.")
-    else:
-        update.message.reply_text("Please send a valid file!")
+    except Exception as e:
+        logger.error(f"Error occurred while handling the file: {e}", exc_info=True)
+        update.message.reply_text("An error occurred while processing the file. Please try again later.")
 
 def error(update: Update, context: CallbackContext) -> None:
     """Log errors caused by Updates."""
