@@ -1,49 +1,74 @@
-import asyncio
-from flask import Flask, request
+import os
+import logging
 from telegram import Update, Bot
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
-from telegram.constants import ParseMode
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask, request
+from threading import Thread
 
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+
+# Initialize the Flask app
 app = Flask(__name__)
+bot = Bot(token=TOKEN)
 
-TOKEN = 'YOUR_BOT_TOKEN'  # Replace with your bot token
-WEBHOOK_URL = 'https://your-webhook-url'  # Replace with your Render service URL
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-async def handle_file(update: Update, context: CallbackContext) -> None:
-    chat_id = update.effective_chat.id
-    file = update.message.document or update.message.video or update.message.photo
+def start(update: Update, context: CallbackContext) -> None:
+    """Send a welcome message when the command /start is issued."""
+    update.message.reply_text('Hi! Send or forward me any file, and I will give you a direct download link.')
+
+def handle_files(update: Update, context: CallbackContext) -> None:
+    """Handle files sent or forwarded by users."""
+    file = update.message.document or update.message.audio or update.message.video or update.message.photo[-1] if update.message.photo else None
+
     if file:
         file_id = file.file_id
-        file_info = await context.bot.get_file(file_id)
-        file_url = file_info.file_path
-        # Send the file URL back to the user
-        await context.bot.send_message(chat_id, f"Here is your download link: {file_url}")
+        new_file = context.bot.get_file(file_id)
+        download_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
 
-async def set_webhook() -> None:
-    bot = Bot(token=TOKEN)
-    await bot.set_webhook(url=WEBHOOK_URL)
+        # Assuming you're using Cloudflare Workers for direct linking
+        cloudflare_url = f"https://your.cloudflare.workers.dev/{new_file.file_id}"
 
-async def main() -> None:
-    # Initialize the application
-    application = Application.builder().token(TOKEN).build()
+        update.message.reply_text(f"Here is your direct download link: {cloudflare_url}")
+    else:
+        update.message.reply_text("Please send a valid file!")
 
-    # Add handlers
-    application.add_handler(MessageHandler(filters.Document.ALL | filters.Photo.ALL | filters.Video.ALL, handle_file))
+def error(update: Update, context: CallbackContext) -> None:
+    """Log Errors caused by Updates."""
+    logger.warning(f"Update {update} caused error {context.error}")
 
-    # Set webhook
-    await set_webhook()
+def run_bot():
+    updater = Updater(TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-    # Start the application
-    await application.run_polling()
+    # Commands
+    dp.add_handler(CommandHandler("start", start))
 
-@app.route(f'/{TOKEN}', methods=['POST'])
-def webhook() -> str:
-    json_str = request.get_data(as_text=True)
-    update = Update.de_json(json_str, Bot(token=TOKEN))
-    application = Application.builder().token(TOKEN).build()
-    application.process_update(update)
-    return 'ok'
+    # Handle all file types
+    dp.add_handler(MessageHandler(Filters.document | Filters.audio | Filters.video | Filters.photo, handle_files))
 
-if __name__ == '__main__':
-    # Run the Flask server
-    app.run(port=8443, debug=True, host='0.0.0.0')
+    # Log all errors
+    dp.add_error_handler(error)
+
+    # Start the Bot
+    updater.start_polling()
+    updater.idle()
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """Handle updates from Telegram webhook."""
+    update = Update.de_json(request.get_json(), bot)
+    updater.dispatcher.process_update(update)
+    return 'ok', 200
+
+def run_flask():
+    """Run the Flask app to serve webhook."""
+    app.run(host='0.0.0.0', port=5000)
+
+if __name__ == "__main__":
+    # Run both bot and Flask app in parallel
+    Thread(target=run_bot).start()
+    Thread(target=run_flask).start()
