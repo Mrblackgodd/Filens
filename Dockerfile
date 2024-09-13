@@ -1,20 +1,17 @@
-# Use official Python image
+# Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file
-COPY requirements.txt requirements.txt
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Install the dependencies
+# Install the required dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . .
+# Expose port 5000 for Flask app
+EXPOSE 5000
 
-# Expose the port Flask will run on
-EXPOSE 8443
-
-# Start the bot
+# Run the bot script
 CMD ["python", "app.py"]
