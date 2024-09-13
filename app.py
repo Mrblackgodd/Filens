@@ -30,7 +30,7 @@ def handle_files(update: Update, context: CallbackContext) -> None:
             new_file = context.bot.get_file(file_id)
             logger.info(f"File path retrieved: {new_file.file_path}")
 
-            # Construct the Telegram file download URL
+            # Construct the Telegram file download URL correctly
             telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
             update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
 
