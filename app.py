@@ -26,13 +26,13 @@ def handle_files(update: Update, context: CallbackContext) -> None:
 
     if file:
         file_id = file.file_id
+        
+        # Fetch the file path using the file ID
         new_file = context.bot.get_file(file_id)
-        download_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
+        telegram_file_url = f"https://api.telegram.org/file/bot{TOKEN}/{new_file.file_path}"
 
-        # Assuming you're using Cloudflare Workers for direct linking
-        cloudflare_url = f"https://your.cloudflare.workers.dev/{new_file.file_id}"
-
-        update.message.reply_text(f"Here is your direct download link: {cloudflare_url}")
+        # Respond with the Telegram file URL
+        update.message.reply_text(f"Here is your direct download link: {telegram_file_url}")
     else:
         update.message.reply_text("Please send a valid file!")
 
